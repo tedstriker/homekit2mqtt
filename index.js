@@ -18,7 +18,7 @@ var mqttCallbacks = {};
 var mqttConnected;
 
 log.info('mqtt trying to connect', config.url);
-var mqtt = Mqtt.connect(config.url, {will: {topic: config.name + '/connected', payload: '0', retain: true}});
+var mqtt = Mqtt.connect(config.url, {will: {topic: config.name + '/connected', payload: '0', retain: true}, rejectUnauthorized: false});
 
 mqtt.on('connect', function () {
     mqttConnected = true;
@@ -361,6 +361,8 @@ var createAccessory = {
                 callback(null, on);
             });
 
+
+
         if (settings.topic.setBrightness) {
             light.getService(Service.Lightbulb)
                 .addCharacteristic(Characteristic.Brightness)
@@ -373,7 +375,6 @@ var createAccessory = {
                 });
 
             if (settings.topic.statusBrightness) {
-                
                 //update status in homekit if exernal status gets updated
                 mqttSub(settings.topic.statusBrightness, function(val) {
                     log.debug('> hap set', settings.name, 'Brightness', mqttStatus[settings.topic.statusBrightness]);
@@ -381,7 +382,8 @@ var createAccessory = {
                         .getCharacteristic(Characteristic.Brightness)
                         .getValue();
                 });
-                
+
+                mqttSub(settings.topic.statusBrightness);
                 light.getService(Service.Lightbulb)
                     .getCharacteristic(Characteristic.Brightness)
                     .on('get', function (callback) {
@@ -467,7 +469,15 @@ var createAccessory = {
             });
 
         if (settings.topic.statusOn) {
-            mqttSub(settings.topic.statusOn);
+
+            //update status in homekit if exernal status gets updated
+            mqttSub(settings.topic.statusOn, function(val) {
+                log.debug('> hap set', settings.name, 'On', mqttStatus[settings.topic.statusOn]);
+                sw.getService(Service.Switch)
+                    .getCharacteristic(Characteristic.On)
+                    .getValue();
+            });
+
             sw.getService(Service.Switch)
                 .getCharacteristic(Characteristic.On)
                 .on('get', function (callback) {
